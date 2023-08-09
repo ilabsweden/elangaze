@@ -10,7 +10,7 @@ class PupilRecording:
         self.endTime = endTime
         self.fixations = self.selectFixations(fixations,startTime,endTime)
 
-    def getEaf(self,template='template2.etf'):
+    def getEaf(self,template='templates/template2.etf'):
         eaf = Eaf(template)
         eaf.add_linked_file(self.path,mimetype='video/mp4')
         for i, row in self.fixations.iterrows():
