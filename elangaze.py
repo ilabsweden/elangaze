@@ -4,18 +4,24 @@ from pympi import Eaf
 import pandas as pd
 
 class PupilRecording:
-    def __init__(self, path, fixations, startTime, endTime):
+    def __init__(self, path, fixations, startTime, endTime, participant, label):
         self.path = path
         self.startTime = startTime
         self.endTime = endTime
+        self.participant = participant
+        self.label = label
         self.fixations = self.selectFixations(fixations,startTime,endTime)
 
-    def getEaf(self,template='templates/template2.etf'):
+    def getEaf(self,template='templates/template.etf'):
         eaf = Eaf(template)
         eaf.add_linked_file(self.path,mimetype='video/mp4')
         for i, row in self.fixations.iterrows():
             eaf.add_annotation('Fixations', round((row['start timestamp [ns]']-self.startTime)/1000000), round((row['end timestamp [ns]']-self.startTime)/1000000), str(row['fixation id']))
         return eaf
+    
+    def getEafPath(self):
+        parts = os.path.split(self.path)
+        return '%s/P%s_%s_%s.eaf'%(parts[0],self.participant,self.label,parts[1].replace('.mp4',''))
 
     def selectFixations(self,fixations,startTime,endTime):
         fixations = pd.read_csv(fixations)
@@ -31,13 +37,13 @@ class PupilRecording:
         sections = pd.read_csv(os.path.join(enritchmentFolder,'sections.csv'))
 
         for i, row in sections.iterrows():
-            print(row)
-            print('----')
+            # print(row)
+            # print('----')
             
             recording = cls.findSection(enritchmentFolder,row['section id'])
             rawRecording = cls.findRecording(rawDataFolder,row['recording id'])
             if recording and rawRecording:
-                yield cls(recording,os.path.join(rawRecording,'fixations.csv'),row['section start time [ns]'],row['section end time [ns]'])
+                yield cls(recording,os.path.join(rawRecording,'fixations.csv'),row['section start time [ns]'],row['section end time [ns]'],row['wearer name'],row['start event name'].replace('-Start',''))
             else:
                 print('Unable to locate raw data for section', row['section id'])
             
@@ -62,8 +68,8 @@ class PupilRecording:
 
 
 if __name__ == '__main__':
-    for r in PupilRecording.loadRecordings('exampleData/VCC_Bumper_GAZE-OVERLAY_F3','exampleData/raw-data-export'):
+    for r in PupilRecording.loadRecordings('data/VCC_Bumper_GAZE-OVERLAY_F4','data/raw-data-export'):
         print(r.path)
         eaf = r.getEaf()
-        eaf.to_file(r.path.replace('.mp4','.eaf'))
+        eaf.to_file(r.getEafPath())
 
