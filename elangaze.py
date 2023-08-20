@@ -1,7 +1,25 @@
+"""ELANgaze - Extraction of PupilLabs gaze data into ELAN (eaf) annotation files. 
+
+See README.md for usage.
+
+Copyright (C) 2023  Erik Billing, erik.billing@his.se
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+"""
+
 
 import os, json
 from pympi import Eaf
 import pandas as pd
+import argparse
 
 class PupilRecording:
     def __init__(self, path, fixations, startTime, endTime, participant, label):
@@ -34,6 +52,9 @@ class PupilRecording:
 
     @classmethod
     def loadRecordings(cls,enritchmentFolder,rawDataFolder):
+        assert os.path.isdir(enritchmentFolder)
+        assert os.path.isdir(rawDataFolder)
+
         sections = pd.read_csv(os.path.join(enritchmentFolder,'sections.csv'))
 
         for i, row in sections.iterrows():
@@ -66,10 +87,22 @@ class PupilRecording:
                     return os.path.join(root,f)
 
 
+def main():
+    parser = argparse.ArgumentParser(
+                    prog='ELANgaze',
+                    description='Extraction of PupilLabs gaze data into ELAN (eaf) annotation files',
+                    epilog='See README.md for usage.')
+    parser.add_argument('overlay', nargs='+',help='gaze overlay data folder to be processed')
+    parser.add_argument('--raw',default='data/raw-data-export',help='raw gaze data folder')
+    parser.add_argument('--template',default='templates/template.etf',help='ELAN template file to be used')
+
+    args = parser.parse_args()    
+    for overlay in args.overlay:
+        for r in PupilRecording.loadRecordings(overlay,args.raw):
+            print('Analyzing',r.path,'...')
+            eaf = r.getEaf(args.template)
+            eaf.to_file(r.getEafPath())
+            print('ELAN annotations saved to',r.getEafPath())
 
 if __name__ == '__main__':
-    for r in PupilRecording.loadRecordings('data/VCC_Bumper_GAZE-OVERLAY_F4','data/raw-data-export'):
-        print(r.path)
-        eaf = r.getEaf()
-        eaf.to_file(r.getEafPath())
-
+    main()
